@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Carte Fedeltà</title>
+  <style>
+    /* Stili di base per layout e componenti */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+    .hidden {
+      display: none;
+    }
+    .card {
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin: 5px 0;
+      cursor: pointer;
+    }
+    #addCardBtn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      font-size: 24px;
+      padding: 10px 20px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Registrazione -->
+  <div id="registerDiv">
+    <h2>Registrazione</h2>
+    <input type="email" id="registerEmail" placeholder="Email" /><br/>
+    <input type="password" id="registerPassword" placeholder="Password" /><br/>
+    <button id="registerBtn">Registrati</button>
+    <p>Hai già un account?</p> <a href="#" id="toLogin">Accedi</a></p>
+  </div>
+
+  <!-- Login -->
+  <div id="loginDiv" class="hidden">
+    <h2>Login</h2>
+    <input type="email" id="loginEmail" placeholder="Email" /><br/>
+    <input type="password" id="loginPassword" placeholder="Password" /><br/>
+    <button id="loginBtn">Accedi</button>
+    <p><a href="#" id="toReset">Password dimenticata?</a></p>
+    <p>Non hai un account? <a href="#" id="toRegister">Registrati</a></p>
+  </div>
+
+  <!-- Reset Password -->
+  <div id="resetDiv" class="hidden">
+    <h2>Reset Password</h2>
+    <input type="email" id="resetEmail" placeholder="Email" /><br/>
+    <button id="resetBtn">Invia email di reset</button>
+    <p><a href="#" id="backToLogin">Torna al login</a></p>
+  </div>
+
+  <!-- Dashboard -->
+  <div id="dashboardDiv" class="hidden">
+    <h2>Le tue Carte Fedeltà</h2>
+    <div id="cardsContainer"></div>
+    <button id="addCardBtn">+</button>
+    <button id="logoutBtn">Logout</button>
+  </div>
+
+  <!-- Modale per aggiungere carta -->
+  <div id="addCardModal" class="hidden">
+    <h3>Aggiungi Carta</h3>
+    <input type="text" id="storeName" placeholder="Nome del negozio" /><br/>
+    <input type="text" id="barcode" placeholder="Codice a barre" /><br/>
+    <button id="saveCardBtn">Salva</button>
+    <button id="cancelAddCardBtn">Annulla</button>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    // Importa le funzioni necessarie da Firebase SDK
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import {
+      getAuth,
+      createUserWithEmailAndPassword,
+      signInWithEmailAndPassword,
+      sendEmailVerification,
+      sendPasswordResetEmail,
+      signOut,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+    import {
+      getFirestore,
+      collection,
+      addDoc,
+      getDocs,
+      query,
+      where
+    } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+    // Import JsBarcode
+    import JsBarcode from "https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js";
+
+    // Configurazione Firebase
+    const firebaseConfig = {
+  apiKey: "AIzaSyAYcp-kiDtjyh5luKXuGTArxMMx2bG7H6w",
+  authDomain: "mycard-4aa97.firebaseapp.com",
+  projectId: "mycard-4aa97",
+  storageBucket: "mycard-4aa97.appspot.com",
+  messagingSenderId: "635409642988",
+  appId: "1:635409642988:web:a1e247a551dad923027cc9"
+};
+
+    // Inizializza Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // Riferimenti agli elementi del DOM
+    const registerDiv = document.getElementById("registerDiv");
+    const loginDiv = document.getElementById("loginDiv");
+    const resetDiv = document.getElementById("resetDiv");
+    const dashboardDiv = document.getElementById("dashboardDiv");
+    const addCardModal = document.getElementById("addCardModal");
+    const cardsContainer = document.getElementById("cardsContainer");
+
+    // Navigazione tra le sezioni
+    document.getElementById("toLogin").addEventListener("click", () => {
+      registerDiv.classList.add("hidden");
+      loginDiv.classList.remove("hidden");
+    });
+
+    document.getElementById("toRegister").addEventListener("click", () => {
+      loginDiv.classList.add("hidden");
+      registerDiv.classList.remove("hidden");
+    });
+
+    document.getElementById("toReset").addEventListener("click", () => {
+      loginDiv.classList.add("hidden");
+      resetDiv.classList.remove("hidden");
+    });
+
+    document.getElementById("backToLogin").addEventListener("click", () => {
+      resetDiv.classList.add("hidden");
+      loginDiv.classList.remove("hidden");
+    });
+
+    // Registrazione
+    document.getElementById("registerBtn").addEventListener("click", async () => {
+      const email = document.getElementById("registerEmail").value;
+      const password = document.getElementById("registerPassword").value;
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        await sendEmailVerification(userCredential.user);
+        alert("Registrazione riuscita! Verifica la tua email prima di accedere.");
+        registerDiv.classList.add("hidden");
+        loginDiv.classList.remove("hidden");
+      } catch (error) {
+        alert(error.message);
+      }
+    });
+
+    // Login
+    document.getElementById("loginBtn").addEventListener("click", async () => {
+      const email = document.getElementById("loginEmail").value;
+      const password = document.getElementById("loginPassword").value;
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        if (userCredential.user.emailVerified) {
+          loginDiv.classList.add("hidden");
+          dashboardDiv.classList.remove("hidden");
+          loadCards(userCredential.user.uid);
+        } else {
+          alert("Verifica la tua email prima di accedere.");
+          await signOut(auth);
+        }
+      } catch (error) {
+        alert(error.message);
+      }
+    });
+
+    // Reset Password
+    document.getElementById("resetBtn").addEventListener("click", async () => {
+      const email = document.getElementById("resetEmail").value;
+      try {
+        await sendPasswordResetEmail(auth, email);
+        alert("Email di reset inviata!");
+        resetDiv.classList.add("hidden");
+        loginDiv.classList.remove("hidden");
+      } catch (error) {
+        alert(error.message);
+      }
+    });
+
+    // Logout
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
+      await signOut(auth);
+      dashboardDiv.classList.add("hidden");
+      loginDiv.classList.remove("hidden");
+    });
+
+    // Aggiungi Carta
+    document.getElementById("addCardBtn").addEventListener("click", () => {
+      addCardModal.classList.remove("hidden");
+    });
+
+    document.getElementById("cancelAddCardBtn").addEventListener("click", () => {
+      addCardModal.classList.add("hidden");
+    });
+
+    document.getElementById("saveCardBtn").addEventListener("click", async () => {
+      const storeName = document.getElementById("storeName").value;
+      const barcode = document.getElementById("barcode").value;
+      const user = auth.currentUser;
+      if (user) {
+        try {
+          await addDoc(collection(db, "cards"), {
+            uid: user.uid,
+            storeName,
+            barcode
+          });
+          addCardModal.classList.add("hidden");
+          loadCards(user.uid);
+        } catch (error) {
+          alert(error.message);
+        }
+      }
+    });
+
+    // Carica le carte dell'utente
+    async function loadCards(uid) {
+      cardsContainer.innerHTML = "";
+      const q = query(collection(db, "cards"), where("uid", "==", uid));
+      const querySnapshot = await getDocs(q);
+      querySnapshot.forEach((doc) => {
+        const card = doc.data();
+        const cardDiv = document.createElement("div");
+        cardDiv.classList.add("card");
+        cardDiv.textContent = `${card.storeName}`;
+        
+        cardDiv.addEventListener("click", () => {
+          const barcodeModal = document.createElement("div");
+          barcodeModal.style.position = "fixed";
+          barcodeModal.style.top = "0";
+          barcodeModal.style.left = "0";
+          barcodeModal.style.width = "100%";
+          barcodeModal.style.height = "100%";
+          barcodeModal.style.background = "rgba(0,0,0,0.5)";
+          barcodeModal.style.display = "flex";
+          barcodeModal.style.alignItems = "center";
+          barcodeModal.style.justifyContent = "center";
+          barcodeModal.style.zIndex = "1000";
+
+          const modalContent = document.createElement("div");
+          modalContent.style.background = "#fff";
+          modalContent.style.padding = "20px";
+          modalContent.style.borderRadius = "10px";
+          modalContent.style.textAlign = "center";
+
+          const title = document.createElement("h3");
+          title.textContent = card.storeName;
+
+          const svg = document.createElement("svg");
+          JsBarcode(svg, card.barcode, { format: "CODE128", width: 2, height: 100, displayValue: true });
+
+          const closeBtn = document.createElement("button");
+          closeBtn.textContent = "Chiudi";
+          closeBtn.add
