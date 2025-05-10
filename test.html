@@ -1,157 +1,336 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Nyra Chat</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nyra Alt</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     body {
-      font-family: 'Segoe UI', sans-serif;
-      background-color: #121212;
-      color: #ffffff;
       margin: 0;
       padding: 0;
+      background: #0e0e0e;
+      font-family: 'Segoe UI', sans-serif;
       display: flex;
       flex-direction: column;
       height: 100vh;
+      color: #e2e2e2;
+    }
+
+    header {
+      padding: 20px;
+      text-align: center;
+      font-size: 1.8rem;
+      font-weight: bold;
+      color: #ffffff;
+      border-bottom: 1px solid #222;
+      position: relative;
+      backdrop-filter: blur(10px) saturate(150%);
+      -webkit-backdrop-filter: blur(10px) saturate(150%);
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    #menuButton {
+      position: absolute;
+      left: 20px;
+      top: 20px;
+      font-size: 1.5rem;
+      background: none;
+      border: none;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    #sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 250px;
+      height: 100%;
+      background: #1a1a1a;
+      border-right: 1px solid #333;
+      transform: translateX(-100%);
+      transition: transform 0.3s ease;
+      z-index: 999;
+      padding-top: 60px;
+      overflow-y: auto;
+    }
+
+    #sidebar.active {
+      transform: translateX(0);
+    }
+
+    #sidebar ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    #sidebar li {
+      padding: 15px 20px;
+      border-bottom: 1px solid #333;
+      cursor: pointer;
+    }
+
+    #sidebar li:hover {
+      background: #333;
+    }
+
+    #newChatButton {
+      padding: 15px 20px;
+      background: #b20087;
+      color: white;
+      border: none;
+      width: 100%;
+      font-weight: bold;
+      cursor: pointer;
     }
 
     .chat-container {
       flex: 1;
+      overflow-y: auto;
+      padding: 20px;
       display: flex;
       flex-direction: column;
-      padding: 20px;
-      overflow-y: auto;
+      gap: 15px;
     }
 
-    .response {
-      background-color: #1e1e1e;
-      border-radius: 10px;
+    .message {
+      max-width: 80%;
       padding: 15px;
-      margin-bottom: 15px;
+      border-radius: 15px;
+      line-height: 1.5;
       white-space: pre-wrap;
+      word-break: break-word;
     }
 
-    .input-container {
+    .user {
+      align-self: flex-end;
+      background: #b20087;
+      color: #fff;
+      border-bottom-right-radius: 0;
+    }
+
+    .bot {
+      align-self: flex-start;
+      background: #1f1f1f;
+      color: #e2e2e2;
+      border-bottom-left-radius: 0;
+      border: 1px solid #333;
+    }
+
+    .input-area {
       display: flex;
-      padding: 10px;
-      background-color: #1a1a1a;
-      border-top: 1px solid #333;
+      padding: 15px;
+      border-top: 1px solid #222;
+      background: #0d0d0d;
     }
 
-    input[type="text"] {
+    .input-area input {
       flex: 1;
-      padding: 10px;
+      padding: 15px;
+      font-size: 1rem;
+      border-radius: 10px;
       border: none;
-      border-radius: 5px;
-      background-color: #2b2b2b;
+      background: #1f1f1f;
       color: #fff;
-      font-size: 16px;
+      margin-right: 10px;
+      outline: none;
     }
 
-    button {
-      margin-left: 10px;
-      padding: 10px 15px;
-      background-color: #00bfa6;
-      color: #fff;
+    .input-area button {
+      background: #444;
       border: none;
-      border-radius: 5px;
+      padding: 0 20px;
+      font-weight: bold;
+      font-size: 1rem;
+      border-radius: 10px;
+      color: #fff;
       cursor: pointer;
+      transition: 0.3s;
     }
 
-    button:hover {
-      background-color: #009e8a;
+    .input-area button:hover {
+      background: #666;
     }
 
-    .watermark {
-      text-align: center;
-      font-size: 12px;
-      color: #888;
-      padding: 5px;
-      background-color: #1a1a1a;
-      border-top: 1px solid #333;
-    }
-
-    .watermark a {
-      color: #00bfa6;
-      text-decoration: none;
-    }
-
-    .watermark a:hover {
-      text-decoration: underline;
+    .logo {
+      height: 40px;
+      vertical-align: middle;
     }
   </style>
 </head>
 <body>
-  <div class="chat-container" id="chat">
-    <div class="response" id="response">Benvenuto! Scrivi qualcosa qui sotto per parlare con Nyra.</div>
+  <header>
+    <button id="menuButton" onclick="toggleSidebar()">☰</button>
+    <img src="https://cdn.discordapp.com/attachments/1236018798717571174/1370854993426386954/InShot_20250510_220802039.jpg?ex=682103b3&is=681fb233&hm=139b469837ae5ef8ca3c559a5789a41a4383a18dd7de06e2f2414f54fc2ac2cb&" alt="Nyra Alt Logo" class="logo" />
+  </header>
+
+  <div id="sidebar">
+    <button id="newChatButton" onclick="newChat()">+ Nuova Chat</button>
+    <ul id="chatList"></ul>
   </div>
 
-  <div class="input-container">
-    <input type="text" id="userInput" placeholder="Scrivi un messaggio...">
+  <div class="chat-container" id="chatContainer"></div>
+
+  <div class="input-area">
+    <input type="text" id="userInput" placeholder="I tuoi pensieri qui!" onkeydown="if(event.key==='Enter')sendMessage()" />
     <button onclick="sendMessage()">Invia</button>
   </div>
 
-  <div class="watermark">
-    Powered by <a href="https://nyra.aurastudioitalia.it" target="_blank">nyra.aurastudioitalia.it</a>
-  </div>
-
   <script>
+    let chats = [];
+    let currentChatIndex = 0;
+
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('active');
+    }
+
+    function closeSidebarIfClickedOutside(event) {
+      const sidebar = document.getElementById('sidebar');
+      const menuButton = document.getElementById('menuButton');
+      if (!sidebar.contains(event.target) && !menuButton.contains(event.target)) {
+        sidebar.classList.remove('active');
+      }
+    }
+
+    document.addEventListener('click', closeSidebarIfClickedOutside);
+
+    function saveChats() {
+      localStorage.setItem("nyraChats", JSON.stringify(chats));
+      localStorage.setItem("nyraCurrentChat", currentChatIndex);
+    }
+
+    function loadChats() {
+      const savedChats = localStorage.getItem("nyraChats");
+      const savedIndex = localStorage.getItem("nyraCurrentChat");
+
+      if (savedChats) {
+        chats = JSON.parse(savedChats);
+        currentChatIndex = parseInt(savedIndex) || 0;
+      } else {
+        newChat();
+      }
+
+      updateChatList();
+      renderCurrentChat();
+    }
+
+    function updateChatList() {
+      const list = document.getElementById('chatList');
+      list.innerHTML = '';
+
+      chats.forEach((chat, index) => {
+        const firstUserMsg = chat.find(msg => msg.role === 'user')?.content || 'Chat senza titolo';
+        const li = document.createElement('li');
+        li.textContent = firstUserMsg.slice(0, 30);
+        li.onclick = () => {
+          currentChatIndex = index;
+          renderCurrentChat();
+          saveChats();
+          toggleSidebar();
+        };
+        list.appendChild(li);
+      });
+    }
+
+    function newChat() {
+      chats.unshift([]); // Aggiungi la nuova chat all'inizio
+      currentChatIndex = 0; // Imposta la nuova chat come la corrente
+      updateChatList();
+      renderCurrentChat();
+      saveChats();
+      toggleSidebar(); // Chiudi il menu quando si crea una nuova chat
+    }
+
+    function renderCurrentChat() {
+      const chatContainer = document.getElementById('chatContainer');
+      chatContainer.innerHTML = '';
+      const currentChat = chats[currentChatIndex];
+
+      currentChat.forEach(msg => {
+        appendMessage(msg.role, msg.content);
+      });
+    }
+
+    function appendMessage(role, content) {
+      const chat = document.getElementById('chatContainer');
+      const div = document.createElement('div');
+      div.className = `message ${role}`;
+      div.innerHTML = content;
+      chat.appendChild(div);
+      scrollToBottom();
+    }
+
+    function scrollToBottom() {
+      const chat = document.getElementById('chatContainer');
+      chat.scrollTop = chat.scrollHeight;
+    }
+
     async function sendMessage() {
-      const input = document.getElementById("userInput");
+      const input = document.getElementById('userInput');
       const message = input.value.trim();
       if (!message) return;
 
-      const chat = document.getElementById("chat");
+      appendMessage('user', message);
+      chats[currentChatIndex].push({ role: 'user', content: message });
+      input.value = '';
+      scrollToBottom();
+      saveChats();
 
-      const userMsg = document.createElement("div");
-      userMsg.className = "response";
-      userMsg.textContent = "Tu: " + message;
-      chat.appendChild(userMsg);
-
-      input.value = "";
-      chat.scrollTop = chat.scrollHeight;
-
-      const loadingMsg = document.createElement("div");
-      loadingMsg.className = "response";
-      loadingMsg.textContent = "Nyra sta scrivendo...";
-      chat.appendChild(loadingMsg);
+      const loadingEl = document.createElement('div');
+      loadingEl.className = 'message bot';
+      loadingEl.textContent = '⏳ Nyra sta pensando...';
+      document.getElementById('chatContainer').appendChild(loadingEl);
+      scrollToBottom();
 
       try {
         const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer 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"
+            "Authorization": "Bearer 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",
+            "HTTP-Referer": "https://alt.nyra.ai/",
+            "X-Title": "NyraALT",
+            "Content-Type": "application/json"
           },
           body: JSON.stringify({
-            model: "nousresearch/deephermes-3-mistral-24b-preview:free",
-            messages: [{ role: "user", content: message }],
-            temperature: 0.8
+            "model": "nousresearch/deephermes-3-mistral-24b-preview:free",
+            "messages": [
+              {
+                "role": "system",
+                "content": "nome = Nyra Alt"
+              },
+              {
+                "role": "system",
+                "content": "developer = Anto di Aura Studio ma questa è una distribuzione non ufficiale. Trova Nyra ufficiale su https://nyra.aurastudioitalia.it"
+              },
+              {
+                "role": "system",
+                "content": "lingua = Italiano"
+              },
+{
+                "role": "user",
+                "content": message
+              }
+            ],
+            "temperature": 0.7
           })
         });
 
         const data = await res.json();
-        loadingMsg.remove();
+        const botMessage = data.choices[0].message.content.trim();
+        chats[currentChatIndex].push({ role: 'bot', content: botMessage });
 
-        const botResponse = document.createElement("div");
-        botResponse.className = "response";
-        botResponse.textContent = "Nyra: " + (data.choices?.[0]?.message?.content || "Errore nella risposta.");
-        chat.appendChild(botResponse);
-        chat.scrollTop = chat.scrollHeight;
-      } catch (err) {
-        loadingMsg.remove();
-        const errorMsg = document.createElement("div");
-        errorMsg.className = "response";
-        errorMsg.textContent = "Errore durante la richiesta. Riprova.";
-        chat.appendChild(errorMsg);
+        const lastMessage = document.querySelector('.message.bot:last-child');
+        lastMessage.textContent = botMessage;
+        scrollToBottom();
+        saveChats();
+      } catch (error) {
+        console.error('Errore:', error);
       }
     }
 
-    // invio con Enter
-    document.getElementById("userInput").addEventListener("keydown", function (e) {
-      if (e.key === "Enter") sendMessage();
-    });
+    window.onload = loadChats;
   </script>
 </body>
 </html>
