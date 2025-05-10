@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nyra Chat</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #121212;
+      color: #ffffff;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    .chat-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .response {
+      background-color: #1e1e1e;
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 15px;
+      white-space: pre-wrap;
+    }
+
+    .input-container {
+      display: flex;
+      padding: 10px;
+      background-color: #1a1a1a;
+      border-top: 1px solid #333;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      background-color: #2b2b2b;
+      color: #fff;
+      font-size: 16px;
+    }
+
+    button {
+      margin-left: 10px;
+      padding: 10px 15px;
+      background-color: #00bfa6;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #009e8a;
+    }
+
+    .watermark {
+      text-align: center;
+      font-size: 12px;
+      color: #888;
+      padding: 5px;
+      background-color: #1a1a1a;
+      border-top: 1px solid #333;
+    }
+
+    .watermark a {
+      color: #00bfa6;
+      text-decoration: none;
+    }
+
+    .watermark a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container" id="chat">
+    <div class="response" id="response">Benvenuto! Scrivi qualcosa qui sotto per parlare con Nyra.</div>
+  </div>
+
+  <div class="input-container">
+    <input type="text" id="userInput" placeholder="Scrivi un messaggio...">
+    <button onclick="sendMessage()">Invia</button>
+  </div>
+
+  <div class="watermark">
+    Powered by <a href="https://nyra.aurastudioitalia.it" target="_blank">nyra.aurastudioitalia.it</a>
+  </div>
+
+  <script>
+    async function sendMessage() {
+      const input = document.getElementById("userInput");
+      const message = input.value.trim();
+      if (!message) return;
+
+      const chat = document.getElementById("chat");
+
+      const userMsg = document.createElement("div");
+      userMsg.className = "response";
+      userMsg.textContent = "Tu: " + message;
+      chat.appendChild(userMsg);
+
+      input.value = "";
+      chat.scrollTop = chat.scrollHeight;
+
+      const loadingMsg = document.createElement("div");
+      loadingMsg.className = "response";
+      loadingMsg.textContent = "Nyra sta scrivendo...";
+      chat.appendChild(loadingMsg);
+
+      try {
+        const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer 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"
+          },
+          body: JSON.stringify({
+            model: "nousresearch/deephermes-3-mistral-24b-preview:free",
+            messages: [{ role: "user", content: message }],
+            temperature: 0.8
+          })
+        });
+
+        const data = await res.json();
+        loadingMsg.remove();
+
+        const botResponse = document.createElement("div");
+        botResponse.className = "response";
+        botResponse.textContent = "Nyra: " + (data.choices?.[0]?.message?.content || "Errore nella risposta.");
+        chat.appendChild(botResponse);
+        chat.scrollTop = chat.scrollHeight;
+      } catch (err) {
+        loadingMsg.remove();
+        const errorMsg = document.createElement("div");
+        errorMsg.className = "response";
+        errorMsg.textContent = "Errore durante la richiesta. Riprova.";
+        chat.appendChild(errorMsg);
+      }
+    }
+
+    // invio con Enter
+    document.getElementById("userInput").addEventListener("keydown", function (e) {
+      if (e.key === "Enter") sendMessage();
+    });
+  </script>
+</body>
+</html>
